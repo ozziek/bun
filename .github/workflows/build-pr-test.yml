@@ -52,18 +52,13 @@ jobs:
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Build Bun (release)
+      - name: Patch out Werror for undefined-var-template
         run: |
-          cmake -S . -B build/release \
-            -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER=/usr/bin/clang-21 \
-            -DCMAKE_CXX_COMPILER=/usr/bin/clang++-21 \
-            -DCMAKE_AR=/usr/bin/llvm-ar-21 \
-            -DCMAKE_RANLIB=/usr/bin/llvm-ranlib-21 \
-            -DLLD_PROGRAM=/usr/lib/llvm-21/bin/ld.lld \
-            -DCMAKE_CXX_FLAGS="-Wno-error=undefined-var-template"
-          cmake --build build/release -- -j$(nproc)
+          # Add -Wno-error=undefined-var-template to the cmake config
+          sed -i 's/-Werror=return-type/-Werror=return-type -Wno-error=undefined-var-template/' cmake/targets/BuildBun.cmake
+
+      - name: Build Bun (release)
+        run: bun run build:release
 
       - name: Test binary
         run: |
