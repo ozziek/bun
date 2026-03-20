@@ -1,0 +1,56 @@
+name: Build Bun (PR 27960 test)
+on:
+  workflow_dispatch:
+
+jobs:
+  build-linux-x64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            wget curl git ca-certificates gnupg lsb-release software-properties-common \
+            python3 ninja-build unzip pkg-config libxml2-dev ruby bison gawk perl make golang ccache xz-utils
+
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install -y gcc-13 g++-13 libgcc-13-dev libstdc++-13-dev
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-13 100
+
+          wget -qO- https://github.com/Kitware/CMake/releases/download/v3.30.5/cmake-3.30.5-linux-x86_64.tar.gz \
+            | sudo tar xz --strip-components=1 -C /usr/local
+
+          wget -qO- https://apt.llvm.org/llvm.sh | sudo bash -s -- 21 all
+          for tool in clang clang++ lld llvm-ar llvm-ranlib; do
+            sudo update-alternatives --install /usr/bin/$tool $tool /usr/bin/$tool-21 100
+          done
+
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2025-12-10
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install Bun (bootstrap)
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Build Bun (smol profile)
+        run: bun run build:smol
+
+      - name: Test binary
+        run: |
+          ./build/release-smol/bun --version
+          echo "Binary size: $(ls -lh build/release-smol/bun | awk '{print $5}')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bun-linux-x64-pr27960
+          path: build/release-smol/bun
+          if-no-files-found: error
