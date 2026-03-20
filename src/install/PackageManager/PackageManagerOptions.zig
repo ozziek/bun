@@ -259,7 +259,7 @@ pub fn load(
     }
 
     if (base.url.len == 0) base.url = Npm.Registry.default_url;
-    this.scope = try Npm.Registry.resolveDefaultScope(bun_install_, allocator, env);
+    this.scope = try Npm.Registry.Scope.fromAPI("", base, allocator, env);
     defer {
         this.did_override_default_scope = this.scope.url_hash != Npm.Registry.default_url_hash;
     }
@@ -406,7 +406,34 @@ pub fn load(
         break :brk Output.stderr_descriptor_type != .terminal;
     };
 
-    // Registry env var override is handled by resolveDefaultScope above.
+    // technically, npm_config is case in-sensitive
+    // load_registry:
+    {
+        const registry_keys = [_]string{
+            "BUN_CONFIG_REGISTRY",
+            "NPM_CONFIG_REGISTRY",
+            "npm_config_registry",
+        };
+        var did_set = false;
+
+        inline for (registry_keys) |registry_key| {
+            if (!did_set) {
+                if (env.get(registry_key)) |registry_| {
+                    if (registry_.len > 0 and
+                        (strings.startsWith(registry_, "https://") or
+                            strings.startsWith(registry_, "http://")))
+                    {
+                        const prev_scope = this.scope;
+                        var api_registry = std.mem.zeroes(Api.NpmRegistry);
+                        api_registry.url = registry_;
+                        api_registry.token = prev_scope.token;
+                        this.scope = try Npm.Registry.Scope.fromAPI("", api_registry, allocator, env);
+                        did_set = true;
+                    }
+                }
+            }
+        }
+    }
 
     {
         const token_keys = [_]string{
