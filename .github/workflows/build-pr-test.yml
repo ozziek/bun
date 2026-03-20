@@ -52,8 +52,18 @@ jobs:
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Build Bun (release, no LTO)
-        run: bun run build:release
+      - name: Build Bun (release)
+        run: |
+          cmake -S . -B build/release \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=/usr/bin/clang-21 \
+            -DCMAKE_CXX_COMPILER=/usr/bin/clang++-21 \
+            -DCMAKE_AR=/usr/bin/llvm-ar-21 \
+            -DCMAKE_RANLIB=/usr/bin/llvm-ranlib-21 \
+            -DLLD_PROGRAM=/usr/lib/llvm-21/bin/ld.lld \
+            -DCMAKE_CXX_FLAGS="-Wno-error=undefined-var-template"
+          cmake --build build/release -- -j$(nproc)
 
       - name: Test binary
         run: |
