@@ -1,6 +1,8 @@
 name: Build Bun (PR 27960 test)
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - claude/deflake-worker-threads-test
 
 jobs:
   build-linux-x64:
