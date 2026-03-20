@@ -38,21 +38,30 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly-2025-12-10
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
+      - name: Increase swap for Zig compilation
+        run: |
+          sudo swapoff -a
+          sudo fallocate -l 16G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
       - name: Install Bun (bootstrap)
         run: |
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Build Bun (smol profile)
-        run: bun run build:smol
+      - name: Build Bun (release, no LTO)
+        run: bun run build:release
 
       - name: Test binary
         run: |
-          ./build/release-smol/bun --version
-          echo "Binary size: $(ls -lh build/release-smol/bun | awk '{print $5}')"
+          ./build/release/bun --version
+          echo "Binary size: $(ls -lh build/release/bun | awk '{print $5}')"
 
       - uses: actions/upload-artifact@v4
         with:
           name: bun-linux-x64-pr27960
-          path: build/release-smol/bun
+          path: build/release/bun
           if-no-files-found: error
