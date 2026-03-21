@@ -1,0 +1,37 @@
+name: worker-intl-destruction-pr-artifact
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download PR #27960 Bun artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ozziek/bun
+          run-id: 23363029098
+          name: bun-linux-x64-pr27960
+          path: ./.pr-bun
+
+      - name: Make Bun executable
+        shell: bash
+        run: chmod +x ./.pr-bun/bun
+
+      - name: Run worker Intl destruction regression
+        shell: bash
+        env:
+          WORKER_INTL_DESTRUCTION_RUN_COUNT: "200"
+          WORKER_INTL_DESTRUCTION_CONCURRENCY: "4"
+        run: ./.pr-bun/bun test test/js/node/worker_threads/worker_intl_destruction.test.ts
