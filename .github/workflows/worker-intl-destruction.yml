@@ -1,0 +1,56 @@
+name: worker-intl-destruction
+
+on:
+  push:
+    branches:
+      - ozzie/worker-intl-destruction-test
+      - ozzie/worker-intl-destruction-test-pr27960
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Add swap
+        shell: bash
+        run: |
+          sudo fallocate -l 16G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=16384
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - name: Setup bootstrap Bun
+        uses: ./.github/actions/setup-bun
+        with:
+          bun-version: latest
+
+      - name: Install build dependencies
+        shell: bash
+        run: ./scripts/bootstrap.sh --ci
+
+      - name: Install JavaScript dependencies
+        shell: bash
+        run: bun install --frozen-lockfile
+
+      - name: Build Bun release
+        shell: bash
+        env:
+          CFLAGS: -Wno-error=undefined-var-template
+          CXXFLAGS: -Wno-error=undefined-var-template
+        run: bun run build:release
+
+      - name: Run worker Intl destruction regression
+        shell: bash
+        env:
+          WORKER_INTL_DESTRUCTION_RUN_COUNT: "200"
+          WORKER_INTL_DESTRUCTION_CONCURRENCY: "4"
+        run: ./build/release/bun test test/js/node/worker_threads/worker_intl_destruction.test.ts
