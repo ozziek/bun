@@ -1,6 +1,9 @@
 name: worker-intl-destruction-pr-artifact
 
 on:
+  push:
+    branches:
+      - ozzie/worker-intl-destruction-test-pr27960
   workflow_dispatch:
 
 permissions:
