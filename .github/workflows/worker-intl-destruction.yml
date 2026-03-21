@@ -22,10 +22,11 @@ jobs:
       - name: Add swap
         shell: bash
         run: |
-          sudo fallocate -l 16G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=16384
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          SWAPFILE="${RUNNER_TEMP}/bun-worker-intl.swap"
+          sudo fallocate -l 16G "$SWAPFILE" || sudo dd if=/dev/zero of="$SWAPFILE" bs=1M count=16384
+          sudo chmod 600 "$SWAPFILE"
+          sudo mkswap "$SWAPFILE"
+          sudo swapon "$SWAPFILE"
           free -h
 
       - name: Setup bootstrap Bun
