@@ -4,19 +4,17 @@ const CONCURRENCY = Number.parseInt(process.env.WORKER_INTL_DESTRUCTION_CONCURRE
 const RUN_COUNT = Number.parseInt(process.env.WORKER_INTL_DESTRUCTION_RUN_COUNT ?? "200", 10);
 
 function exerciseWorkerIntl() {
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(123456.78);
-  new Intl.Collator("de-DE", { sensitivity: "accent" }).compare("straße", "strasse");
-  new Intl.PluralRules("ar-EG").select(3);
+  new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date());
 }
 
 function exerciseParentIntl(n: number) {
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(n);
+  new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(2026, 0, (n % 28) + 1));
 }
 
 if (isMainThread) {
